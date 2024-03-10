@@ -1,9 +1,8 @@
 name: Terraform Validation and Plan
 
 on:
-  push:
-    paths:
-      - '**'
+  pull_request:
+    branches: [ main, master ]
 
 env:
   AWS_REGION : "us-west-1"
