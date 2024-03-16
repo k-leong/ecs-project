@@ -21,15 +21,16 @@ module "ecr" {
   source = "./ecr"
 }
 
-module "ecs" {
-  source = "./ecs"
-
-  aws_ecr_repository = module.ecr.aws_ecr_repository
-}
-
 module "docker" {
   source = "./docker"
 
   aws_ecr_repository = module.ecr.aws_ecr_repository
   aws_region         = "us-west-1"
+}
+
+variable "heroku_api_key" {}
+
+module "heroku" {
+  source         = "./heroku"
+  heroku_api_key = var.heroku_api_key
 }

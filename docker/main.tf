@@ -4,7 +4,7 @@ resource "null_resource" "build_docker_image" {
   }
 
   provisioner "local-exec" {
-    command = "docker build -t my_image:latest ../app"
+    command = "docker build -t my_image:latest ./app"
   }
 
   depends_on = [var.aws_ecr_repository]
