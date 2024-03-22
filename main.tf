@@ -28,9 +28,9 @@ module "docker" {
   aws_region         = "us-west-1"
 }
 
-variable "heroku_api_key" {}
+module "ecs" {
+  source = "./ecs"
 
-module "heroku" {
-  source         = "./heroku"
-  heroku_api_key = var.heroku_api_key
+  subnets            = module.vpc.public_subnet_ids
+  aws_ecr_repository = module.ecr.aws_ecr_repository
 }
