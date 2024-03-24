@@ -9,7 +9,7 @@ resource "aws_iam_role" "test_role" {
         ]
         Effect = "Allow"
         Principal = {
-          Service = "ecs.amazonaws.com"
+          Service = "ecs-tasks.amazonaws.com"
         }
       },
     ]

@@ -17,7 +17,8 @@ resource "aws_ecs_task_definition" "test-def" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn = var.execution_role
+  task_role_arn            = var.execution_role
+  execution_role_arn       = var.execution_role
   container_definitions    = <<TASK_DEFINITION
 [
   {
