@@ -12,12 +12,12 @@ resource "aws_ecs_cluster_capacity_providers" "test-capacity" {
 }
 
 resource "aws_ecs_task_definition" "test-def" {
-  family                   = "sample-fargate"
+  family                   = "dog-fargate"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
   memory                   = 512
-  execution_role_arn       = "arn:aws:iam::423291775617:role/ecsTaskExecutionRole"
+  execution_role_arn = var.execution_role
   container_definitions    = <<TASK_DEFINITION
 [
   {

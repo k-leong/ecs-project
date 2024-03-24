@@ -7,3 +7,7 @@ variable "aws_ecr_repository" {
     repository_url = string
   })
 }
+
+variable "execution_role" {
+  type = string
+}

@@ -33,4 +33,11 @@ module "ecs" {
 
   subnets            = module.vpc.public_subnet_ids
   aws_ecr_repository = module.ecr.aws_ecr_repository
+  execution_role     = module.iam.ecs_role_arn
+}
+
+module "iam" {
+  source = "./iam"
+
+  ecs_arn = module.ecs.ecs_task_arn
 }

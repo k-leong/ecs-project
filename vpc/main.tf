@@ -67,10 +67,10 @@ resource "aws_route_table" "test_rt" {
 
 resource "aws_route_table_association" "public1_association" {
   route_table_id = aws_route_table.test_rt.id
-  subnet_id = aws_subnet.public1.id
+  subnet_id      = aws_subnet.public1.id
 }
 
 resource "aws_route_table_association" "public2_association" {
   route_table_id = aws_route_table.test_rt.id
-  subnet_id = aws_subnet.public2.id
+  subnet_id      = aws_subnet.public2.id
 }
