@@ -6,6 +6,6 @@ variable "igw_id" {
   type = string
 }
 
-variable "subnet" {
+variable "subnets" {
   type = list(string)
 }

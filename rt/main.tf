@@ -9,12 +9,8 @@ resource "aws_route_table" "igw_route" {
   }
 }
 
-resource "aws_route_table_association" "public1_association" {
+resource "aws_route_table_association" "public_association" {
+  count = length(var.subnets)
   route_table_id = aws_route_table.igw_route.id
-  subnet_id      = var.subnet[0]
-}
-
-resource "aws_route_table_association" "public2_association" {
-  route_table_id = aws_route_table.igw_route.id
-  subnet_id      = var.subnet[1]
+  subnet_id      = var.subnets[count.index]
 }
