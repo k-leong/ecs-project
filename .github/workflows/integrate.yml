@@ -1,8 +1,10 @@
-name: Terraform Apply
+name: Terraform Validation and Plan
 
 on:
-  pull_request:
-    branches: [ main, master ]
+  push:
+    branches-ignore:
+      - main
+      - master
 
 env:
   AWS_REGION : "us-west-1"
@@ -12,11 +14,11 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Terraform setup
         uses: hashicorp/setup-terraform@v3
@@ -24,23 +26,25 @@ jobs:
           terraform_version: 1.6.4
 
       - name: Assume AWS IAM Role
+        id: configureCreds
         uses: aws-actions/configure-aws-credentials@v4.0.1
         with: 
-          role-to-assume: arn:aws:iam::${{secrets.AWS_ACCOUNT}}:role/GitHubAction-AssumeRoleWithAction
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/GitHubAction-AssumeRoleWithAction
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
-          aws-region: ${{env.AWS_REGION}}
+          aws-region: ${{ env.AWS_REGION }}
         continue-on-error: false
 
       - name: Assume Role Failure
-        if: failure()
+        if: steps.configureCreds.outcome == 'failure'
         run: |
           echo "job failed"
           aws sts get-caller-identity
+          exit 1
 
       - name: Terraform Init
         id: init
         run: terraform init
 
-      - name: Terraform Apply
-        id: apply
-        run: terraform apply --auto-approve
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan

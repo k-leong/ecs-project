@@ -1,0 +1,80 @@
+name: Terraform Apply
+
+on:
+  pull_request:
+    branches: [main, master]
+
+env:
+  AWS_REGION : "us-west-1"
+  AWS_DEFAULT_OUTPUT: json
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Terraform setup
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.4
+
+      - name: Assume AWS IAM Role
+        id: configureCreds
+        uses: aws-actions/configure-aws-credentials@v4.0.1
+        with: 
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/GitHubAction-AssumeRoleWithAction
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.AWS_REGION }}
+        continue-on-error: false
+
+      - name: Assume Role Failure
+        if: steps.configureCreds.outcome == 'failure'
+        run: |
+          echo "job failed"
+          aws sts get-caller-identity
+          exit 1
+
+      - name: Generate tfstate file
+        id: generate_filename
+        run: |
+          export filename="tfstate-ecs"
+          echo "filename ${filename}"
+          echo "filename=${filename}.tfstate" >> $GITHUB_OUTPUT
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply --auto-approve
+        continue-on-error: false
+
+      - name: Terraform Destroy
+        if: steps.apply.outcome == 'failure'
+        run: |
+          terraform destroy --auto-approve
+          echo "resources destroyed"
+          exit 1
+
+      - name: Store State in S3
+        id: store_state_in_s3
+        if: steps.apply.outcome == 'success'
+        run: |
+          cat terraform.tfstate | base64 -w 0 > ${{steps.generate_filename.outputs.filename}}
+          aws s3 cp ${{steps.generate_filename.outputs.filename}} ${{ secrets.S3_URI }}${{steps.generate_filename.outputs.filename}}
+
+      - name: Terraform Clean up
+        if: steps.store_state_in_s3.outcome == 'success'
+        run: |
+          rm -rf ${{steps.generate_filename.outputs.filename}}
+          terraform destroy --auto-approve
+          echo "terraform clean up"
+          exit 0
