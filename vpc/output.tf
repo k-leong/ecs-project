@@ -1,11 +1,11 @@
 output "public_subnet_ids" {
-  value = [aws_subnet.public1.id, aws_subnet.public2.id]
-}
-
-output "private_subnet_ids" {
-  value = [aws_subnet.private1.id, aws_subnet.private2.id]
+  value = { for name, subnet in aws_subnet.public : name => subnet.id }
 }
 
 output "vpc_id" {
-  value = aws_vpc.terraform_test.id
+  value = aws_vpc.tf_vpc.id
+}
+
+output "igw_id" {
+  value = aws_internet_gateway.igw.id
 }
