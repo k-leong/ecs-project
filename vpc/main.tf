@@ -6,23 +6,15 @@ resource "aws_vpc" "tf_vpc" {
   }
 }
 
-resource "aws_subnet" "public1" {
-  vpc_id            = aws_vpc.tf_vpc.id
-  cidr_block        = "172.50.0.0/24"
-  availability_zone = "us-west-1b"
+resource "aws_subnet" "public" {
+  for_each = var.public_subnets
+
+  vpc_id = aws_vpc.tf_vpc.id
+  cidr_block = each.value.cidr_block
+  availability_zone = each.value.availability_zone
 
   tags = {
-    Name = "terraform public subnet 1"
-  }
-}
-
-resource "aws_subnet" "public2" {
-  vpc_id            = aws_vpc.tf_vpc.id
-  cidr_block        = "172.50.30.0/24"
-  availability_zone = "us-west-1c"
-
-  tags = {
-    Name = "terraform public subnet 2"
+    Name = "terraform public subnet ${each.key}"
   }
 }
 

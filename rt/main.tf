@@ -10,7 +10,7 @@ resource "aws_route_table" "igw_route" {
 }
 
 resource "aws_route_table_association" "public_association" {
-  count = length(var.subnets)
+  for_each =  var.subnets
   route_table_id = aws_route_table.igw_route.id
-  subnet_id      = var.subnets[count.index]
+  subnet_id = each.value
 }

@@ -1,5 +1,5 @@
 output "public_subnet_ids" {
-  value = [aws_subnet.public1.id, aws_subnet.public2.id]
+  value = { for name, subnet in aws_subnet.public : name => subnet.id }
 }
 
 output "vpc_id" {
