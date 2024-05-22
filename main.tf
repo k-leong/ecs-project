@@ -32,9 +32,10 @@ module "sg" {
 
   vpc_id = module.vpc.vpc_id
 }
-# module "ecr" {
-#   source = "./ecr"
-# }
+
+module "ecr" {
+  source = "./ecr"
+}
 
 # module "docker" {
 #   source = "./docker"
