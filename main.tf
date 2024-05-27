@@ -37,6 +37,13 @@ module "ecr" {
   source = "./ecr"
 }
 
+module "elb" {
+  source = "./elb"
+
+  subnets = module.vpc.public_subnet_ids
+  vpc = module.vpc.vpc_id
+}
+
 # module "docker" {
 #   source = "./docker"
 
@@ -44,16 +51,17 @@ module "ecr" {
 #   aws_region         = "us-west-1"
 # }
 
-# module "ecs" {
-#   source = "./ecs"
+module "ecs" {
+  source = "./ecs"
 
-#   subnets            = module.vpc.public_subnet_ids
-#   aws_ecr_repository = module.ecr.aws_ecr_repository
-#   execution_role     = module.iam.ecs_role_arn
-# }
+  subnets            = module.vpc.public_subnet_ids
+  aws_ecr_repository = module.ecr.aws_ecr_repository
+  execution_role     = module.iam.ecs_role_arn
+  container_image = var.ecs_container_image
+  sg = module.sg.sg
+  alb_target_group = module.elb.elb_target_group_arn
+}
 
-# module "iam" {
-#   source = "./iam"
-
-#   ecs_arn = module.ecs.ecs_task_arn
-# }
+module "iam" {
+  source = "./iam"
+}
