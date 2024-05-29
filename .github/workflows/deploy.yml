@@ -32,7 +32,7 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/GitHubAction-AssumeRoleWithAction
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ env.AWS_REGION }}
-        continue-on-error: false
+        continue-on-error: true
 
       - name: Assume Role Failure
         if: steps.configureCreds.outcome == 'failure'
@@ -55,7 +55,7 @@ jobs:
       - name: Terraform Apply
         id: apply
         run: terraform apply --auto-approve
-        continue-on-error: false
+        continue-on-error: true
 
       - name: Terraform Destroy
         if: steps.apply.outcome == 'failure'
