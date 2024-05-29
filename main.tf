@@ -42,6 +42,7 @@ module "elb" {
 
   subnets = module.vpc.public_subnet_ids
   vpc = module.vpc.vpc_id
+  sg = module.sg.alb_sg
 }
 
 # module "docker" {

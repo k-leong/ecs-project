@@ -2,6 +2,7 @@ resource "aws_lb" "test" {
   name = "test-alb"
   internal = false
   load_balancer_type = "application"
+  security_groups = [ var.sg ]
   subnets = toset(values(var.subnets))
 }
 
