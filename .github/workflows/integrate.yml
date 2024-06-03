@@ -5,6 +5,8 @@ on:
     branches-ignore:
       - main
       - master
+    paths-ignore:
+      - 'pipeline/**'
 
 env:
   AWS_REGION : "us-west-1"
