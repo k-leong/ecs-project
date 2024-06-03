@@ -1,0 +1,25 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Checking for changes in Dockerfile..."
+      - |
+        if [ $(git rev-list --count HEAD) -gt 1 ]; then
+          if git diff --quiet HEAD~1 HEAD -- app/; then
+            echo "No changes in Dockerfile or app. Skipping build."
+            exit 0
+          else
+            echo "Changes detected in Dockerfile. Building Docker image..."
+            # Command to build Docker image
+            # docker build -t my-image:latest .
+          fi
+        else
+            echo "Not enough commits to compare. Building Docker image..."
+            # Command to build Docker image
+            # docker build -t my-image:latest .
+        fi
+  build:
+    commands:
+      - echo "Hello World"
+      
