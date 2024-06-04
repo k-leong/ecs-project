@@ -22,4 +22,5 @@ phases:
   build:
     commands:
       - echo "Hello World"
+      - echo $ECR_REPO
       
