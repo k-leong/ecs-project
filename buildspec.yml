@@ -1,0 +1,67 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output=text)
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - echo "Checking if ECR repository contains any images..."
+      - IMAGES=$(aws ecr list-images --repository-name $REPO_NAME --query 'imageIds' --output text | wc -l)
+      - echo $IMAGES
+      - if [ "$IMAGES" -eq 0 ]; then
+          echo "ECR repository is empty. Building and pushing new image.";
+          SHOULD_BUILD="true";
+        else
+          echo "ECR repository contains images. Checking for latest version...";
+          if [ $(git rev-list --count HEAD) -gt 1 ]; then
+            if git diff --quiet HEAD~1 HEAD -- app/; then
+              echo "No changes in Dockerfile or app. Skipping build."
+              SHOULD_BUILD="false";
+            else
+              echo "Changes detected in Dockerfile or app. Building Docker image..."
+              SHOULD_BUILD="true";
+            fi
+          fi
+        fi
+          # LOCAL_IMAGE_ID=$(docker images -q $DOCKER_IMAGE_NAME:$IMAGE_TAG || true)
+          # if [ -z "$LOCAL_IMAGE_ID" ]; then
+          #   echo "Local image not found. Building new image.";
+          #   SHOULD_BUILD="true";
+          # else
+          #   REMOTE_IMAGE_ID=$(aws ecr batch-get-image --repository-name $REPO_NAME --region $REGION --image-ids imageTag=$IMAGE_TAG --query 'images[0].imageManifest' --output text | sha256sum | awk '{ print $1 }')
+          #   LOCAL_IMAGE_ID=$(docker inspect --format='{{index .RepoDigests 0}}' $DOCKER_IMAGE_NAME:$IMAGE_TAG | cut -d'@' -f2)
+          #   if [ "$REMOTE_IMAGE_ID" != "$LOCAL_IMAGE_ID" ]; then
+          #     echo "Local image is not the latest version. Building new image.";
+          #     SHOULD_BUILD="true";
+          #   else
+          #     echo "Local image is the latest version. No need to build.";
+          #     SHOULD_BUILD="false";
+          #   fi
+
+  build:
+    on-failure: ABORT
+    commands:
+      - if [ "$SHOULD_BUILD" == "true" ]; then
+          echo "Building the Docker image...";
+          docker build -t $DOCKER_IMAGE_NAME:$IMAGE_TAG ./app;
+          echo "Finished build";
+        else
+          echo "Skipping Docker image build.";
+        fi
+  post_build:
+    commands:
+      - if [ "$SHOULD_BUILD" == "true" ]; then
+          echo "Tagging the Docker image...";
+          docker tag $DOCKER_IMAGE_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG;
+          echo "Finished tagging"
+          echo "Pushing the Docker image to ECR...";
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG;
+        else
+          echo "Skipping Docker image push.";
+        fi
+
+artifacts:
+  files:
+    - '**/*'
+  discard-paths: yes

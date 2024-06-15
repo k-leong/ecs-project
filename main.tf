@@ -56,7 +56,7 @@ module "ecs" {
   source = "./ecs"
 
   subnets            = module.vpc.public_subnet_ids
-  aws_ecr_repository = module.ecr.aws_ecr_repository
+  # aws_ecr_repository = module.ecr.aws_ecr_repository
   execution_role     = module.iam.ecs_role_arn
   container_image = var.ecs_container_image
   sg = module.sg.sg

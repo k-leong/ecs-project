@@ -2,11 +2,11 @@ variable "subnets" {
   type = map(string)
 }
 
-variable "aws_ecr_repository" {
-  type = object({
-    repository_url = string
-  })
-}
+# variable "aws_ecr_repository" {
+#   type = object({
+#     repository_url = string
+#   })
+# }
 
 variable "execution_role" {
   type = string
