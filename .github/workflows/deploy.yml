@@ -1,10 +1,10 @@
-name: Terraform Apply
+name: Deploy
 
 on:
-  pull_request:
-    branches: [main, master]
-    paths-ignore:
-      - 'pipeline/**'
+  workflow_run:
+    workflows: [Terraform Apply]
+    types:
+      - completed
 
 env:
   AWS_REGION : "us-west-1"
@@ -43,40 +43,67 @@ jobs:
           aws sts get-caller-identity
           exit 1
 
-      - name: Generate tfstate file
-        id: generate_filename
+      - name: Log in ECR
+        id: login-ecr
+        # uses: aws-actions/amazon-ecr-login@v2.0.1
+        # with:
+        #   mask-password: 'true'
+        #   registry-type: 'private'
         run: |
-          export filename="tfstate-ecs"
-          echo "filename ${filename}"
-          echo "filename=${filename}.tfstate" >> $GITHUB_OUTPUT
+          echo "Logging in to Amazon ECR..."
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
 
-      - name: Terraform Init
-        id: init
+      - name: Check for images
+        id: check-images
+        run: |
+          echo "Checking if ECR repository contains any images..."
+          IMAGES=$(aws ecr list-images --repository-name $REPO_NAME --query 'imageIds' --output text | wc -l)
+          echo $IMAGES
+          if [ "$IMAGES" -eq 0 ]; then
+            echo "ECR repository is empty. Building and pushing new image.";
+            SHOULD_BUILD="true";
+          else
+            echo "ECR repository contains images. Checking for latest version...";
+            if [ $(git rev-list --count HEAD) -gt 1 ]; then
+              if git diff --quiet HEAD~1 HEAD -- app/; then
+                echo "No changes in Dockerfile or app. Skipping build."
+                SHOULD_BUILD="false";
+              else
+                echo "Changes detected in Dockerfile or app. Building Docker image..."
+                SHOULD_BUILD="true";
+              fi
+            fi
+          fi
+          echo "should_build=SHOULD_BUILD" >> $GITHUB_OUTPUT
+
+      - name: Build Docker image
+        id: build-image
+        if: steps.check-images.outputs.should_build == 'true'
+        run: |
+          echo "Building the Docker image...";
+          docker build -t ecs-project ./app;
+          echo "Finished build";
+          FINISHED_BUILD="true";
+          echo "finished_build=FINISHED_BUILD" >> $GITHUB_OUTPUT
+        
+      - name: Post build
+        id: post-build
+        if: steps.build-image.outputs.finished_build == 'true'
+        run: |
+          echo "Pushing the Docker image to ECR...";
+          docker tag ecs-project:latest ${{ secrets.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/ecs-project:latest;
+          docker push ${{ secrets.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/ecs-project:latest;
+
+      - name: Retrieve from S3
+        id: retrieve
+        run: |
+          aws s3api get-object --bucket ${{ secrets.S3_URI }} --key tfstate-ecs.tfstate encoded.tfstate
+          base64 -d encoded.tfstate > decoded.tfstate
+
+      - name: Initializa Terraform
+        id: init-terraform
         run: terraform init
-
-      - name: Terraform Apply
-        id: apply
-        run: terraform apply --auto-approve
-        continue-on-error: true
-
-      - name: Terraform Destroy
-        if: steps.apply.outcome == 'failure'
-        run: |
-          terraform destroy --auto-approve
-          echo "resources destroyed"
-          exit 1
-
-      - name: Store State in S3
-        id: store_state_in_s3
-        if: steps.apply.outcome == 'success'
-        run: |
-          cat terraform.tfstate | base64 -w 0 > ${{steps.generate_filename.outputs.filename}}
-          aws s3 cp ${{steps.generate_filename.outputs.filename}} ${{ secrets.S3_URI }}${{steps.generate_filename.outputs.filename}}
-
-      - name: Terraform Clean up
-        if: steps.store_state_in_s3.outcome == 'success'
-        run: |
-          rm -rf ${{steps.generate_filename.outputs.filename}}
-          terraform destroy --auto-approve
-          echo "terraform clean up"
-          exit 0
+      
+      - name: Apply Terraform
+        id: apply-terraform
+        run: terraform apply -var='ecs_container_image=${{ secrets.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/ecs-project:latest' -state=decoded.tfstate --auto-approve
